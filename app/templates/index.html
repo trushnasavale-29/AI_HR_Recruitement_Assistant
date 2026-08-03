@@ -137,80 +137,73 @@
         AI HR Recruitment Assistant • Built with FastAPI, Groq AI & Jinja2
     </footer>
 
-    <script>
-        const resumeInput = document.getElementById('resumeInput');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const uploadForm = document.getElementById('uploadForm');
-        const loading = document.getElementById('loading');
-        const submitBtn = document.getElementById('submitBtn');
+    <!-- Inside templates/index.html around line 125 -->
+<script>
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const file = resumeInput.files[0];
+        if (!file) return;
 
-        resumeInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                fileNameDisplay.textContent = `Selected: ${e.target.files[0].name}`;
-                fileNameDisplay.classList.add('text-indigo-400');
+        const formData = new FormData();
+        formData.append('file', file);
+
+        loading.classList.remove('hidden');
+        submitBtn.disabled = true;
+
+        try {
+            // 🟢 UPDATE THIS LINE TO MATCH BACKEND ROUTE
+            const response = await fetch('/api/upload/resume', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                // Adjust if your API returns data.candidate_id or data.id
+                const candidateId = data.candidate_id || data.id || (data.candidate && data.candidate.id);
+                window.location.href = `/candidate-view/${candidateId}`;
+            } else {
+                alert(`Error: ${data.detail || 'Failed to analyze resume.'}`);
             }
-        });
-
-        uploadForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const file = resumeInput.files[0];
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            loading.classList.remove('hidden');
-            submitBtn.disabled = true;
-
-            try {
-                const response = await fetch('/upload-resume', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    window.location.href = `/candidate-view/${data.id}`;
-                } else {
-                    alert(`Error: ${data.detail || 'Failed to analyze resume.'}`);
-                }
-            } catch (err) {
-                alert('An error occurred during upload.');
-            } finally {
-                loading.classList.add('hidden');
-                submitBtn.disabled = false;
-            }
-        });
-
-        async function loadCandidates() {
-            try {
-                const res = await fetch('/candidates');
-                const data = await res.json();
-                const container = document.getElementById('candidateList');
-                container.innerHTML = '';
-
-                if (data.length === 0) {
-                    container.innerHTML = `<p class="text-slate-500 text-xs col-span-full">No candidates processed yet. Upload a resume above to begin!</p>`;
-                    return;
-                }
-
-                data.slice(0, 3).forEach(c => {
-                    container.innerHTML += `
-                        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex justify-between items-center hover:border-slate-700 transition">
-                            <div>
-                                <p class="font-bold text-slate-200 text-sm">${c.candidate_name || 'Unnamed'}</p>
-                                <p class="text-xs text-slate-400 mt-0.5">ATS Score: <span class="text-emerald-400 font-semibold">${c.ats_score || 0}/100</span></p>
-                            </div>
-                            <a href="/candidate-view/${c.id}" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-sky-400 font-medium border border-slate-700 transition">View →</a>
-                        </div>
-                    `;
-                });
-            } catch (err) {
-                console.error(err);
-            }
+        } catch (err) {
+            alert('An error occurred during upload.');
+        } finally {
+            loading.classList.add('hidden');
+            submitBtn.disabled = false;
         }
+    });
 
-        loadCandidates();
-    </script>
+    async function loadCandidates() {
+        try {
+            // Ensure this endpoint matches your GET candidates route
+            const res = await fetch('/api/candidates'); 
+            if (!res.ok) return;
+            const data = await res.json();
+            const container = document.getElementById('candidateList');
+            container.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-xs col-span-full">No candidates processed yet. Upload a resume above to begin!</p>`;
+                return;
+            }
+
+            data.slice(0, 3).forEach(c => {
+                container.innerHTML += `
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex justify-between items-center hover:border-slate-700 transition">
+                        <div>
+                            <p class="font-bold text-slate-200 text-sm">${c.candidate_name || c.name || 'Unnamed'}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">ATS Score: <span class="text-emerald-400 font-semibold">${c.ats_score || 0}/100</span></p>
+                        </div>
+                        <a href="/candidate-view/${c.id}" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-sky-400 font-medium border border-slate-700 transition">View →</a>
+                    </div>
+                `;
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    loadCandidates();
+</script>
 </body>
 </html>
