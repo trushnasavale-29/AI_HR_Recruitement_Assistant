@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from app.database.database import Base, engine
 from app.routers import upload
 from app.routers import upload, job_match
+from pathlib import Path
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 
@@ -13,9 +14,14 @@ app = FastAPI(
     description="AI-powered resume analysis and recruitment assistant"
 )
 
-# Mount Static Files and Templates
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
+# Get the base directory of the project (where main.py lives)
+BASE_DIR = Path(__file__).resolve().parent
+
+# Mount static files using absolute path
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+# Mount templates using absolute path
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # Include Routers
 
