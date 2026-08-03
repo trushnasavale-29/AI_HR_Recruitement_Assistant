@@ -6,12 +6,13 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-# 1. Update your imports to include User model and auth router
-from app.database.database import Base, engine, get_db
-from app.models.candidate import Candidate, User  # Added User model
-from app.routers import upload, job_match, interview, auth  # Added auth router
 
-# Initialize database tables (creates both 'candidates' and 'users' tables)
+# 1. Database & Model Imports
+from app.database.database import Base, engine, get_db
+from app.models.candidate import Candidate, User 
+from app.routers import upload, job_match, interview, auth 
+
+# Initialize database tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -19,14 +20,12 @@ app = FastAPI(
     description="AI-powered resume analysis and recruitment assistant"
 )
 
-# Base directory where main.py resides (backend/app/)
+# Base directory setup
 APP_DIR = Path(__file__).resolve().parent
-
-# Set static and templates directory paths
 static_path = APP_DIR / "static"
 templates_path = APP_DIR / "templates"
 
-# Auto-create directories if they don't exist on disk (prevents Starlette crash)
+# Auto-create directories if they don't exist
 static_path.mkdir(parents=True, exist_ok=True)
 templates_path.mkdir(parents=True, exist_ok=True)
 
@@ -34,7 +33,7 @@ templates_path.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 templates = Jinja2Templates(directory=str(templates_path))
 
-# 2. Register all routers (Include auth along with your existing routers)
+# 2. Register Routers
 app.include_router(auth.router)
 app.include_router(upload.router)
 app.include_router(job_match.router)
@@ -56,25 +55,24 @@ def get_candidate_by_id(candidate_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Candidate not found")
     return candidate
 
-# --- Frontend Template Views ---
+# --- Frontend Template Views (FIXED HERE) ---
 
 @app.get("/", include_in_schema=False)
 def read_root(request: Request):
     """Render main upload homepage"""
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/candidates-view", include_in_schema=False)
 def candidate_list_view(request: Request):
     """Render candidates directory page"""
-    return templates.TemplateResponse(request, "candidates.html")
+    return templates.TemplateResponse("candidates.html", {"request": request})
 
 @app.get("/candidate-view/{candidate_id}", include_in_schema=False)
 def candidate_dashboard(candidate_id: int, request: Request):
     """Render candidate analysis dashboard"""
     return templates.TemplateResponse(
-        request,
         "dashboard.html",
-        {"candidate_id": candidate_id}
+        {"request": request, "candidate_id": candidate_id}
     )
 
 @app.get("/health", tags=["System"])
