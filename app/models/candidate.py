@@ -14,7 +14,7 @@ class Candidate(Base):
     __tablename__ = "candidates"
 
     id = Column(Integer, primary_key=True, index=True)
-    candidate_name = Column(String, index=True, nullable=True) # REMOVED duplicate 'name' field
+    candidate_name = Column(String, index=True, nullable=True)
     email = Column(String, nullable=True)
     ats_score = Column(Integer, default=0)
     candidate_summary = Column(Text, nullable=True)
