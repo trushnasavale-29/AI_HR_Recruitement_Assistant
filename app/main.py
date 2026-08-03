@@ -6,12 +6,12 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-
+# 1. Update your imports to include User model and auth router
 from app.database.database import Base, engine, get_db
-from app.models.candidate import Candidate
-from app.routers import upload, job_match, interview
+from app.models.candidate import Candidate, User  # Added User model
+from app.routers import upload, job_match, interview, auth  # Added auth router
 
-# Initialize database tables
+# Initialize database tables (creates both 'candidates' and 'users' tables)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -34,7 +34,8 @@ templates_path.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 templates = Jinja2Templates(directory=str(templates_path))
 
-# Include API Routers
+# 2. Register all routers (Include auth along with your existing routers)
+app.include_router(auth.router)
 app.include_router(upload.router)
 app.include_router(job_match.router)
 app.include_router(interview.router)
