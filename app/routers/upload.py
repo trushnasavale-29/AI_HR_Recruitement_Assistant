@@ -55,7 +55,7 @@ async def upload_and_process_resume(
 
         all_skills = tech_skills + soft_skills
 
-        # 3. Create Candidate with ALL DB fields properly JSON-dumped
+        # 3. Create Candidate with existing DB fields
         candidate = Candidate(
             candidate_name=parsed_data.get("candidate_name") or parsed_data.get("name") or "Unknown Candidate",
             email=parsed_data.get("email", ""),
@@ -63,9 +63,9 @@ async def upload_and_process_resume(
             candidate_summary=parsed_data.get("candidate_summary") or parsed_data.get("summary") or "",
             extracted_skills=json.dumps(all_skills),
             missing_keywords=json.dumps(missing_skills),
-            recommended_roles=json.dumps(roles),
             interview_questions=json.dumps(questions)
         )
+        
 
         # 4. Save to Database
         db.add(candidate)
