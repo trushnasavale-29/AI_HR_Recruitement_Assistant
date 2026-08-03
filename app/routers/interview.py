@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -9,15 +10,21 @@ from app.models.candidate import Candidate
 
 router = APIRouter(tags=["Candidate Profile"])
 
-# Initialize Jinja2 templates (looking in static or templates directory)
-templates = Jinja2Templates(directory="templates")
+# Set correct path to templates folder (backend/templates)
+APP_DIR = Path(__file__).resolve().parent.parent
+templates_dir = APP_DIR.parent / "templates" if (APP_DIR.parent / "templates").exists() else APP_DIR / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
 
-# 1. HTML Page Route (Renders the candidate dashboard template)
+# 1. HTML Dashboard Route (Fixed TemplateResponse parameters)
 @router.get("/candidate-view/{candidate_id}", response_class=HTMLResponse)
 async def serve_candidate_page(candidate_id: int, request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request, "candidate_id": candidate_id})
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={"candidate_id": candidate_id}
+    )
 
-# 2. API Endpoint (Fetches structured data for JS fetch)
+# 2. Candidate Data API Endpoint
 @router.get("/api/candidate/{candidate_id}")
 def get_candidate_data(candidate_id: int, db: Session = Depends(get_db)):
     candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
