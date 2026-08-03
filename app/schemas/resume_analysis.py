@@ -1,47 +1,19 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
-
-class Education(BaseModel):
-    degree: str
-    institution: str
-    duration: str
-    performance: str
-
-
-class Project(BaseModel):
-    name: str
-    description: str
-    technologies: List[str]
-
-
-class Experience(BaseModel):
-    role: str
-    organization: str
-    description: str
-
-
-class ResumeAnalysis(BaseModel):
-    candidate_summary: str
-
-    education: List[Education]
-
-    technical_skills: List[str]
-
-    soft_skills: List[str]
-
-    projects: List[Project]
-
-    experience: List[Experience]
-
-    strengths: List[str]
-
+class JobMatchItem(BaseModel):
+    job_title: str
+    match_percentage: int
+    matched_skills: List[str]
     missing_skills: List[str]
 
-    recommended_roles: List[str]
-
-    ats_score: int
-
-    ats_suggestions: List[str]
-
-    interview_questions: List[str]
+class ResumeAnalysisResponse(BaseModel):
+    overall_ats_score: int
+    keyword_match: int
+    skill_match: int
+    education_match: int
+    experience_match: int
+    extracted_skills: List[str]
+    missing_keywords: List[str]
+    job_matches: List[JobMatchItem]
+    summary_feedback: str

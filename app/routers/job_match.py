@@ -1,4 +1,3 @@
-# backend/app/routers/job_match.py
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -7,12 +6,12 @@ from app.models.candidate import Candidate
 from app.schemas.job_match import JobMatchRequest, JobMatchResponse
 from app.services.job_matcher import calculate_job_match
 
-router = APIRouter(tags=["Job Matching"])
+router = APIRouter(prefix="/api/job-match", tags=["Job Matching"])
 
 
 @router.post("/match-job", response_model=JobMatchResponse)
 def match_candidate_to_job(request: JobMatchRequest, db: Session = Depends(get_db)):
-    """Calculate match percentage between a candidate and required job skills"""
+    """Calculate match percentage between a candidate and custom required job skills"""
     candidate = db.query(Candidate).filter(Candidate.id == request.candidate_id).first()
     
     if not candidate:

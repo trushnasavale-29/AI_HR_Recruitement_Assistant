@@ -1,6 +1,5 @@
 import json
 import os
-import json
 from groq import Groq
 from app.config import GROQ_API_KEY
 
@@ -13,17 +12,16 @@ client = Groq(api_key=GROQ_API_KEY)
 MODEL_NAME = "llama-3.3-70b-versatile"
 
 
-
-
 def analyze_resume(resume_text: str) -> dict:
     """
-    Sends resume text to Groq LLM and returns a structured JSON object.
+    Sends resume text to Groq LLM and returns a structured JSON object containing
+    detailed ATS sub-scores and job matching cards.
     """
     if not resume_text or not resume_text.strip():
         raise ValueError("Resume text is empty.")
 
     prompt = f"""
-You are an AI HR Recruitment Assistant. Analyze the provided resume text thoroughly and extract/generate the structured information.
+You are an AI HR Recruitment Assistant and Advanced ATS engine. Analyze the provided resume text thoroughly and extract/generate structured information.
 
 RESUME TEXT:
 {resume_text}
@@ -61,8 +59,25 @@ Return ONLY a valid JSON object matching this exact structure with no extra conv
     ],
     "strengths": ["string"],
     "missing_skills": ["string"],
-    "recommended_roles": ["string"],
-    "ats_score": 75,
+    "ats_score": 78,
+    "keyword_match": 82,
+    "skill_match": 75,
+    "education_match": 90,
+    "experience_match": 70,
+    "job_matches": [
+        {{
+            "job_title": "Python Developer Intern",
+            "match_percentage": 82,
+            "matched_skills": ["Python", "FastAPI"],
+            "missing_skills": ["AsyncIO"]
+        }},
+        {{
+            "job_title": "Software Developer Intern",
+            "match_percentage": 76,
+            "matched_skills": ["SQL", "Docker"],
+            "missing_skills": ["System Design"]
+        }}
+    ],
     "ats_suggestions": ["string"],
     "interview_questions": ["string"]
 }}
@@ -112,8 +127,12 @@ Return ONLY a valid JSON object matching this exact structure with no extra conv
         "experience": [],
         "strengths": [],
         "missing_skills": [],
-        "recommended_roles": [],
         "ats_score": 0,
+        "keyword_match": 0,
+        "skill_match": 0,
+        "education_match": 0,
+        "experience_match": 0,
+        "job_matches": [],
         "ats_suggestions": [],
         "interview_questions": [],
     }
