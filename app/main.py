@@ -1,4 +1,5 @@
 # backend/app/main.py
+import os
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,13 +14,22 @@ app = FastAPI(
     title="AI HR Recruitment Assistant",
     description="AI-powered resume analysis and recruitment assistant"
 )
-
-# Absolute path to the directory containing main.py (app/)
+# Resolve base paths dynamically
 APP_DIR = Path(__file__).resolve().parent
 
-# Mount static & template directories directly
-app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
-templates = Jinja2Templates(directory=APP_DIR / "templates")
+# Check if 'static' is next to main.py or one level up
+static_path = APP_DIR / "static"
+if not static_path.exists():
+    static_path = APP_DIR.parent / "static"
+
+# Check if 'templates' is next to main.py or one level up
+templates_path = APP_DIR / "templates"
+if not templates_path.exists():
+    templates_path = APP_DIR.parent / "templates"
+
+# Mount static & template directories safely
+app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+templates = Jinja2Templates(directory=str(templates_path))
 
 # Include Routers
 
