@@ -14,20 +14,18 @@ app = FastAPI(
     title="AI HR Recruitment Assistant",
     description="AI-powered resume analysis and recruitment assistant"
 )
-# Resolve base paths dynamically
+# Base directory where main.py resides (backend/app/)
 APP_DIR = Path(__file__).resolve().parent
 
-# Check if 'static' is next to main.py or one level up
+# Set static and templates directory paths
 static_path = APP_DIR / "static"
-if not static_path.exists():
-    static_path = APP_DIR.parent / "static"
-
-# Check if 'templates' is next to main.py or one level up
 templates_path = APP_DIR / "templates"
-if not templates_path.exists():
-    templates_path = APP_DIR.parent / "templates"
 
-# Mount static & template directories safely
+# Auto-create directories if they don't exist on disk (prevents Starlette crash)
+static_path.mkdir(parents=True, exist_ok=True)
+templates_path.mkdir(parents=True, exist_ok=True)
+
+# Mount static files and templates
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 templates = Jinja2Templates(directory=str(templates_path))
 
