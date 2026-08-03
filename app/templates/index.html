@@ -56,8 +56,9 @@
                 </h2>
                 <p class="text-xs text-slate-400 mb-6">Supported format: PDF (Max size 10MB)</p>
 
+                <!-- 🟢 FORM SECTION -->
                 <form id="uploadForm" class="space-y-5">
-                    <input type="file" id="resumeInput" accept=".pdf" class="hidden" required>
+                    <input type="file" id="resumeInput" name="file" accept=".pdf" class="hidden">
                     
                     <label for="resumeInput" id="dropZone" class="block cursor-pointer p-10 border-2 border-dashed border-slate-700 hover:border-indigo-500 bg-slate-950/50 hover:bg-slate-950 rounded-xl transition text-center group">
                         <div class="text-4xl mb-3 group-hover:scale-110 transition transform">📄</div>
@@ -137,73 +138,102 @@
         AI HR Recruitment Assistant • Built with FastAPI, Groq AI & Jinja2
     </footer>
 
-    <!-- Inside templates/index.html around line 125 -->
-<script>
-    uploadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const file = resumeInput.files[0];
-        if (!file) return;
+    <script>
+        const resumeInput = document.getElementById('resumeInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const uploadForm = document.getElementById('uploadForm');
+        const loading = document.getElementById('loading');
+        const submitBtn = document.getElementById('submitBtn');
+        const dropZone = document.getElementById('dropZone');
 
-        const formData = new FormData();
-        formData.append('file', file);
-
-        loading.classList.remove('hidden');
-        submitBtn.disabled = true;
-
-        try {
-            // 🟢 UPDATE THIS LINE TO MATCH BACKEND ROUTE
-            const response = await fetch('/api/upload/resume', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                // Adjust if your API returns data.candidate_id or data.id
-                const candidateId = data.candidate_id || data.id || (data.candidate && data.candidate.id);
-                window.location.href = `/candidate-view/${candidateId}`;
+        // File Selection Event Listener
+        resumeInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                const selectedFile = e.target.files[0];
+                fileNameDisplay.textContent = `Selected: ${selectedFile.name}`;
+                fileNameDisplay.classList.add('text-indigo-400', 'font-bold');
             } else {
-                alert(`Error: ${data.detail || 'Failed to analyze resume.'}`);
+                fileNameDisplay.textContent = 'Click to browse or drop candidate resume PDF';
+                fileNameDisplay.classList.remove('text-indigo-400', 'font-bold');
             }
-        } catch (err) {
-            alert('An error occurred during upload.');
-        } finally {
-            loading.classList.add('hidden');
-            submitBtn.disabled = false;
-        }
-    });
+        });
 
-    async function loadCandidates() {
-        try {
-            // Ensure this endpoint matches your GET candidates route
-            const res = await fetch('/api/candidates'); 
-            if (!res.ok) return;
-            const data = await res.json();
-            const container = document.getElementById('candidateList');
-            container.innerHTML = '';
+        // Form Submit Handler
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            if (!data || data.length === 0) {
-                container.innerHTML = `<p class="text-slate-500 text-xs col-span-full">No candidates processed yet. Upload a resume above to begin!</p>`;
+            if (!resumeInput.files || resumeInput.files.length === 0) {
+                alert('Please click to select a PDF resume file first!');
                 return;
             }
 
-            data.slice(0, 3).forEach(c => {
-                container.innerHTML += `
-                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex justify-between items-center hover:border-slate-700 transition">
-                        <div>
-                            <p class="font-bold text-slate-200 text-sm">${c.candidate_name || c.name || 'Unnamed'}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">ATS Score: <span class="text-emerald-400 font-semibold">${c.ats_score || 0}/100</span></p>
-                        </div>
-                        <a href="/candidate-view/${c.id}" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-sky-400 font-medium border border-slate-700 transition">View →</a>
-                    </div>
-                `;
-            });
-        } catch (err) {
-            console.error(err);
-        }
-    }
+            const file = resumeInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
 
-    loadCandidates();
-</script>
+            loading.classList.remove('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/upload/resume', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const candidateId = data.candidate_id || data.id || (data.candidate && data.candidate.id);
+                    if (candidateId) {
+                        window.location.href = `/candidate-view/${candidateId}`;
+                    } else {
+                        window.location.href = `/candidates-view`;
+                    }
+                } else {
+                    alert(`Error: ${data.detail || 'Failed to analyze resume.'}`);
+                }
+            } catch (err) {
+                console.error('Upload Error:', err);
+                alert('An error occurred during upload.');
+            } finally {
+                loading.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Load Candidates for quick directory
+        async function loadCandidates() {
+            try {
+                const res = await fetch('/api/candidates');
+                if (!res.ok) return;
+                const data = await res.json();
+                const container = document.getElementById('candidateList');
+                if (!container) return;
+                
+                container.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `<p class="text-slate-500 text-xs col-span-full">No candidates processed yet. Upload a resume above to begin!</p>`;
+                    return;
+                }
+
+                data.slice(0, 3).forEach(c => {
+                    container.innerHTML += `
+                        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex justify-between items-center hover:border-slate-700 transition">
+                            <div>
+                                <p class="font-bold text-slate-200 text-sm">${c.candidate_name || c.name || 'Unnamed'}</p>
+                                <p class="text-xs text-slate-400 mt-0.5">ATS Score: <span class="text-emerald-400 font-semibold">${c.ats_score || 0}/100</span></p>
+                            </div>
+                            <a href="/candidate-view/${c.id}" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-sky-400 font-medium border border-slate-700 transition">View →</a>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        loadCandidates();
+    </script>
 </body>
 </html>
