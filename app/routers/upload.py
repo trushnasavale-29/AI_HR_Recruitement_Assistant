@@ -4,24 +4,31 @@ from app.database.database import get_db
 from app.models.candidate import Candidate
 from app.services.gemini_service import analyze_resume
 
+# Defined prefix as /api/upload
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
 
-@router.post("")  # Or @router.post("/resume") depending on what JS calls
+@router.post("/resume")
 async def upload_and_process_resume(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db)
 ):
-    # Extract file content
+    """
+    Endpoint: POST /api/upload/resume
+    Processes uploaded PDF resume, parses via LLM, and creates Candidate DB record.
+    """
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+
     content = await file.read()
     resume_text = content.decode("utf-8", errors="ignore")
 
     if not resume_text.strip():
-        raise HTTPException(status_code=400, detail="Could not read text from uploaded file")
+        raise HTTPException(status_code=400, detail="Could not read text from uploaded PDF file.")
 
-    # Analyze via Groq Engine
+    # Process resume through LLM service
     parsed_data = analyze_resume(resume_text)
 
-    # Save to PostgreSQL
+    # Save to database
     candidate = Candidate(
         candidate_name=parsed_data.get("candidate_name"),
         email=parsed_data.get("email"),
@@ -47,4 +54,9 @@ async def upload_and_process_resume(
     db.commit()
     db.refresh(candidate)
 
-    return {"status": "success", "candidate_id": candidate.id, "data": parsed_data}
+    return {
+        "status": "success",
+        "id": candidate.id,
+        "candidate_id": candidate.id,
+        "data": parsed_data
+    }

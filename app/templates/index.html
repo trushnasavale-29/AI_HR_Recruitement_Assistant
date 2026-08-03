@@ -47,7 +47,7 @@
         <!-- Dynamic Upload & Analytics Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
-            <!-- Upload Box (Spans 2 cols) -->
+            <!-- Upload Box -->
             <div class="lg:col-span-2 bg-slate-900/90 rounded-2xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
                 <div class="absolute -right-12 -top-12 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -56,7 +56,6 @@
                 </h2>
                 <p class="text-xs text-slate-400 mb-6">Supported format: PDF (Max size 10MB)</p>
 
-                <!-- 🟢 FORM SECTION -->
                 <form id="uploadForm" class="space-y-5">
                     <input type="file" id="resumeInput" name="file" accept=".pdf" class="hidden">
                     
@@ -73,7 +72,7 @@
                     </button>
                 </form>
 
-                <!-- Processing Overlay Status -->
+                <!-- Loading Spinner -->
                 <div id="loading" class="hidden mt-6 bg-indigo-950/50 border border-indigo-800/60 rounded-xl p-4 text-center">
                     <div class="flex items-center justify-center space-x-2 text-indigo-300 font-semibold text-sm animate-pulse">
                         <svg class="animate-spin h-5 w-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -114,7 +113,7 @@
 
         </div>
 
-        <!-- Recent Activity Quick Directory -->
+        <!-- Recent Candidate Profile Index -->
         <div class="mt-16">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -127,7 +126,7 @@
             </div>
 
             <div id="candidateList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Dynamically loaded -->
+                <!-- Dynamically loaded candidates -->
             </div>
         </div>
 
@@ -144,9 +143,8 @@
         const uploadForm = document.getElementById('uploadForm');
         const loading = document.getElementById('loading');
         const submitBtn = document.getElementById('submitBtn');
-        const dropZone = document.getElementById('dropZone');
 
-        // File Selection Event Listener
+        // Handle file picking UI update
         resumeInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files.length > 0) {
                 const selectedFile = e.target.files[0];
@@ -158,12 +156,12 @@
             }
         });
 
-        // Form Submit Handler
+        // Submit form
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
             if (!resumeInput.files || resumeInput.files.length === 0) {
-                alert('Please click to select a PDF resume file first!');
+                alert('Please select a PDF file first!');
                 return;
             }
 
@@ -175,6 +173,7 @@
             submitBtn.disabled = true;
 
             try {
+                // Exact URL match to upload.py APIRouter(prefix="/api/upload") + @router.post("/resume")
                 const response = await fetch('/api/upload/resume', {
                     method: 'POST',
                     body: formData
@@ -183,25 +182,26 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    const candidateId = data.candidate_id || data.id || (data.candidate && data.candidate.id);
+                    const candidateId = data.id || data.candidate_id;
                     if (candidateId) {
                         window.location.href = `/candidate-view/${candidateId}`;
                     } else {
                         window.location.href = `/candidates-view`;
                     }
                 } else {
-                    alert(`Error: ${data.detail || 'Failed to analyze resume.'}`);
+                    const errorMsg = data.detail ? JSON.stringify(data.detail) : 'Failed to analyze resume.';
+                    alert(`Error: ${errorMsg}`);
                 }
             } catch (err) {
                 console.error('Upload Error:', err);
-                alert('An error occurred during upload.');
+                alert('An error occurred while uploading. Please check the browser console.');
             } finally {
                 loading.classList.add('hidden');
                 submitBtn.disabled = false;
             }
         });
 
-        // Load Candidates for quick directory
+        // Load Candidate index
         async function loadCandidates() {
             try {
                 const res = await fetch('/api/candidates');
@@ -209,7 +209,7 @@
                 const data = await res.json();
                 const container = document.getElementById('candidateList');
                 if (!container) return;
-                
+
                 container.innerHTML = '';
 
                 if (!data || data.length === 0) {
