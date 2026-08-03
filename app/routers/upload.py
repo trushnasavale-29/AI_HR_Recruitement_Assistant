@@ -33,43 +33,23 @@ async def upload_and_process_resume(
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
 
-        # 2. Extract structured analysis & interview questions from AI
+        # 2. Extract analysis and interview questions via AI
         parsed_data = analyze_resume(extracted_text)
         if not isinstance(parsed_data, dict):
             parsed_data = {}
 
-        # 3. Create Candidate and set attributes dynamically based on DB columns
-        candidate = Candidate()
-        model_cols = [col.key for col in Candidate.__table__.columns]
+        # 3. Construct Candidate using exact Model fields
+        candidate = Candidate(
+            candidate_name=parsed_data.get("candidate_name") or parsed_data.get("name") or "Unknown Candidate",
+            email=parsed_data.get("email", ""),
+            ats_score=int(parsed_data.get("ats_score", 0)),
+            candidate_summary=parsed_data.get("candidate_summary") or parsed_data.get("summary") or "",
+            extracted_skills=json.dumps(parsed_data.get("technical_skills", []) + parsed_data.get("soft_skills", [])),
+            missing_keywords=json.dumps(parsed_data.get("missing_skills", [])),
+            interview_questions=parsed_data.get("interview_questions", [])
+        )
 
-        # Name
-        name_val = parsed_data.get("candidate_name") or parsed_data.get("name") or "Unknown Candidate"
-        if "candidate_name" in model_cols:
-            setattr(candidate, "candidate_name", name_val)
-        elif "name" in model_cols:
-            setattr(candidate, "name", name_val)
-
-        # Email
-        if "email" in model_cols:
-            setattr(candidate, "email", parsed_data.get("email", ""))
-
-        # Summary
-        summary_val = parsed_data.get("candidate_summary") or parsed_data.get("summary") or ""
-        if "candidate_summary" in model_cols:
-            setattr(candidate, "candidate_summary", summary_val)
-        elif "summary_feedback" in model_cols:
-            setattr(candidate, "summary_feedback", summary_val)
-
-        # ATS Score
-        if "ats_score" in model_cols:
-            setattr(candidate, "ats_score", int(parsed_data.get("ats_score", 0)))
-
-        # RESTORED: Interview Questions
-        interview_qs = parsed_data.get("interview_questions", [])
-        if "interview_questions" in model_cols:
-            setattr(candidate, "interview_questions", interview_qs)
-
-        # 4. Commit to PostgreSQL Database
+        # 4. Save to Database
         db.add(candidate)
         db.commit()
         db.refresh(candidate)
@@ -86,4 +66,4 @@ async def upload_and_process_resume(
     except Exception as e:
         db.rollback()
         print(f"Error processing resume: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Server error processing PDF: {str(e)}")
