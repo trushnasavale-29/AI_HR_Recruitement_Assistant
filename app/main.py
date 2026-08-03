@@ -52,18 +52,23 @@ app.include_router(upload.router)
 app.include_router(job_match.router)
 app.include_router(interview.router)
 
-# --- Candidate Data APIs ---
+# --- Candidate Data APIs (Supports all frontend fetch path variations) ---
 
 @app.get("/api/candidates", tags=["Candidates"])
 def get_all_candidates(db: Session = Depends(get_db)):
     candidates = db.query(Candidate).order_by(Candidate.id.desc()).all()
     return candidates
 
+# Catch all common endpoint variations used by dashboard JS:
+@app.get("/candidates/{candidate_id}", tags=["Candidates"])
 @app.get("/api/candidates/{candidate_id}", tags=["Candidates"])
+@app.get("/api/candidate/{candidate_id}", tags=["Candidates"])
 def get_candidate_by_id(candidate_id: int, db: Session = Depends(get_db)):
     candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    # Clean output formatting for JSON response
     return candidate
 
 # --- Frontend Template Views (FIXED) ---
