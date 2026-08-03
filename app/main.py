@@ -14,14 +14,12 @@ app = FastAPI(
     description="AI-powered resume analysis and recruitment assistant"
 )
 
-# Get the base directory of the project (where main.py lives)
-BASE_DIR = Path(__file__).resolve().parent
+# Absolute path to the directory containing main.py (app/)
+APP_DIR = Path(__file__).resolve().parent
 
-# Mount static files using absolute path
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-
-# Mount templates using absolute path
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
+# Mount static & template directories directly
+app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
+templates = Jinja2Templates(directory=APP_DIR / "templates")
 
 # Include Routers
 
