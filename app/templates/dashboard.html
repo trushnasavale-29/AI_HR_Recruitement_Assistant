@@ -104,9 +104,22 @@
     <script>
         const candidateId = "{{ candidate_id }}";
 
+        // Helper function to safely parse arrays/JSON strings from backend
+        function parseArray(val) {
+            if (!val) return [];
+            if (Array.isArray(val)) return val;
+            try {
+                const parsed = JSON.parse(val);
+                return Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                return String(val).split(',').map(s => s.trim()).filter(Boolean);
+            }
+        }
+
         async function fetchCandidateDetails() {
             try {
-                const res = await fetch(`/candidates/${candidateId}`);
+                // Supports both standard candidate endpoints
+                const res = await fetch(`/api/candidates/${candidateId}`);
                 if (!res.ok) throw new Error("Candidate not found");
                 const data = await res.json();
 
@@ -115,29 +128,36 @@
                 document.getElementById('candidateSummary').textContent = data.candidate_summary || "";
                 document.getElementById('atsScore').textContent = data.ats_score || 0;
 
-                // Technical Skills
+                // 1. Technical Skills (Checks extracted_skills FIRST)
+                const techSkills = parseArray(data.extracted_skills || data.technical_skills);
                 const techContainer = document.getElementById('techSkills');
-                techContainer.innerHTML = (data.technical_skills || []).map(s => 
+                techContainer.innerHTML = techSkills.length ? techSkills.map(s => 
                     `<span class="bg-indigo-950 text-indigo-300 text-xs px-3 py-1 rounded-full border border-indigo-700">${s}</span>`
-                ).join('') || '<span class="text-slate-500 text-sm">None listed</span>';
+                ).join('') : '<span class="text-slate-500 text-sm">None listed</span>';
 
-                // Missing Skills
+                // 2. Missing Skills (Checks missing_keywords FIRST)
+                const missingSkills = parseArray(data.missing_keywords || data.missing_skills);
                 const missingContainer = document.getElementById('missingSkills');
-                missingContainer.innerHTML = (data.missing_skills || []).map(s => 
+                missingContainer.innerHTML = missingSkills.length ? missingSkills.map(s => 
                     `<span class="bg-amber-950 text-amber-300 text-xs px-3 py-1 rounded-full border border-amber-700">${s}</span>`
-                ).join('') || '<span class="text-slate-500 text-sm">None detected</span>';
+                ).join('') : '<span class="text-slate-500 text-sm">None detected</span>';
 
-                // Roles
+                // 3. Recommended Roles
+                const roles = parseArray(data.recommended_roles);
                 const rolesContainer = document.getElementById('recommendedRoles');
-                rolesContainer.innerHTML = (data.recommended_roles || []).map(r => `<li>${r}</li>`).join('') || '<li>No specific recommendations</li>';
+                rolesContainer.innerHTML = roles.length ? roles.map(r => `<li>${r}</li>`).join('') : '<li>No specific recommendations</li>';
 
-                // Interview Questions
+                // 4. Interview Questions
+                const questions = parseArray(data.interview_questions);
                 const questionsContainer = document.getElementById('interviewQuestions');
-                questionsContainer.innerHTML = (data.interview_questions || []).map(q => `<li class="p-2 bg-slate-900 rounded border border-slate-700/50 my-1">${q}</li>`).join('') || '<li>No questions generated</li>';
+                questionsContainer.innerHTML = questions.length ? questions.map(q => 
+                    `<li class="p-2 bg-slate-900 rounded border border-slate-700/50 my-1">${q}</li>`
+                ).join('') : '<li>No questions generated</li>';
 
                 document.getElementById('loader').classList.add('hidden');
                 document.getElementById('content').classList.remove('hidden');
             } catch (err) {
+                console.error(err);
                 document.getElementById('loader').textContent = "❌ Failed to load candidate profile.";
             }
         }
@@ -169,13 +189,15 @@
                     document.getElementById('resJobTitle').textContent = result.job_title;
                     document.getElementById('resMatchScore').textContent = `${result.match_score}% Match`;
 
-                    document.getElementById('resMatchedSkills').innerHTML = result.matched_skills.map(s => 
+                    const matched = parseArray(result.matched_skills);
+                    document.getElementById('resMatchedSkills').innerHTML = matched.length ? matched.map(s => 
                         `<span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">${s}</span>`
-                    ).join('') || '<span class="text-slate-500">None</span>';
+                    ).join('') : '<span class="text-slate-500">None</span>';
 
-                    document.getElementById('resMissingSkills').innerHTML = result.missing_skills.map(s => 
+                    const missing = parseArray(result.missing_skills);
+                    document.getElementById('resMissingSkills').innerHTML = missing.length ? missing.map(s => 
                         `<span class="bg-rose-950 text-rose-300 px-2 py-0.5 rounded border border-rose-800">${s}</span>`
-                    ).join('') || '<span class="text-slate-500">None</span>';
+                    ).join('') : '<span class="text-slate-500">None</span>';
 
                     document.getElementById('matchResult').classList.remove('hidden');
                 } else {
