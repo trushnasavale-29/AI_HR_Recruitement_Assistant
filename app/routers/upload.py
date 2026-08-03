@@ -18,12 +18,11 @@ async def upload_and_process_resume(
     Endpoint: POST /api/upload/resume
     Extracts text from PDF, sends it to the AI service, and saves the result to DB.
     """
-    # 1. Validate File Type
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
     try:
-        # 2. Extract PDF text using PyPDF
+        # 1. Extract PDF text using PyPDF
         contents = await file.read()
         pdf_file = io.BytesIO(contents)
         reader = PdfReader(pdf_file)
@@ -40,33 +39,44 @@ async def upload_and_process_resume(
                 detail="Could not extract text from this PDF. Please ensure it's not scanned or an image."
             )
 
-        # 3. Analyze text with AI Service
+        # 2. Analyze text with AI Service
         parsed_data = analyze_resume(extracted_text)
 
         if not parsed_data or not isinstance(parsed_data, dict):
             raise HTTPException(status_code=500, detail="Failed to parse resume data from AI service.")
 
-        # 4. Save Candidate to DB
-        candidate = Candidate(
-            candidate_name=parsed_data.get("candidate_name", "Unknown Candidate"),
-            email=parsed_data.get("email", ""),
-            candidate_summary=parsed_data.get("candidate_summary", ""),
-            education=parsed_data.get("education", []),
-            technical_skills=parsed_data.get("technical_skills", []),
-            soft_skills=parsed_data.get("soft_skills", []),
-            projects=parsed_data.get("projects", []),
-            experience=parsed_data.get("experience", []),
-            strengths=parsed_data.get("strengths", []),
-            missing_skills=parsed_data.get("missing_skills", []),
-            ats_score=parsed_data.get("ats_score", 0),
-            keyword_match=parsed_data.get("keyword_match", 0),
-            skill_match=parsed_data.get("skill_match", 0),
-            education_match=parsed_data.get("education_match", 0),
-            experience_match=parsed_data.get("experience_match", 0),
-            job_matches=parsed_data.get("job_matches", []),
-            ats_suggestions=parsed_data.get("ats_suggestions", []),
-            interview_questions=parsed_data.get("interview_questions", [])
-        )
+        # 3. Flexible Field Mapping (supports both 'name'/'candidate_name' and 'summary'/'candidate_summary')
+        cand_name = parsed_data.get("candidate_name") or parsed_data.get("name") or "Unknown Candidate"
+        cand_summary = parsed_data.get("candidate_summary") or parsed_data.get("summary") or ""
+
+        # Check model columns dynamically to avoid keyword argument errors
+        candidate_kwargs = {}
+        model_cols = [col.key for col in Candidate.__table__.columns]
+
+        # Map Name
+        if "candidate_name" in model_cols:
+            candidate_kwargs["candidate_name"] = cand_name
+        elif "name" in model_cols:
+            candidate_kwargs["name"] = cand_name
+
+        # Map Summary
+        if "candidate_summary" in model_cols:
+            candidate_kwargs["candidate_summary"] = cand_summary
+        elif "summary" in model_cols:
+            candidate_kwargs["summary"] = cand_summary
+
+        # Map common attributes if present in model
+        for field in [
+            "email", "education", "technical_skills", "soft_skills", 
+            "projects", "experience", "strengths", "missing_skills", 
+            "ats_score", "keyword_match", "skill_match", "education_match", 
+            "experience_match", "job_matches", "ats_suggestions", "interview_questions"
+        ]:
+            if field in model_cols and field in parsed_data:
+                candidate_kwargs[field] = parsed_data[field]
+
+        # Instatantiate candidate model safely
+        candidate = Candidate(**candidate_kwargs)
 
         db.add(candidate)
         db.commit()
