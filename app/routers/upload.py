@@ -38,15 +38,33 @@ async def upload_and_process_resume(
         if not isinstance(parsed_data, dict):
             parsed_data = {}
 
-        # 3. Create Candidate with complete profile details + interview questions
+        # Safe extraction helper with key fallback support
+        def get_list(keys):
+            for k in keys:
+                val = parsed_data.get(k)
+                if isinstance(val, list) and len(val) > 0:
+                    return val
+            return []
+
+        # Extract list fields dynamically
+        tech_skills = get_list(["technical_skills", "extracted_skills", "skills"])
+        soft_skills = get_list(["soft_skills"])
+        missing_skills = get_list(["missing_skills", "missing_keywords"])
+        roles = get_list(["recommended_roles", "suggested_roles", "roles"])
+        questions = get_list(["interview_questions", "questions"])
+
+        all_skills = tech_skills + soft_skills
+
+        # 3. Create Candidate with ALL DB fields properly JSON-dumped
         candidate = Candidate(
             candidate_name=parsed_data.get("candidate_name") or parsed_data.get("name") or "Unknown Candidate",
             email=parsed_data.get("email", ""),
             ats_score=int(parsed_data.get("ats_score", 0)),
             candidate_summary=parsed_data.get("candidate_summary") or parsed_data.get("summary") or "",
-            extracted_skills=json.dumps(parsed_data.get("technical_skills", []) + parsed_data.get("soft_skills", [])),
-            missing_keywords=json.dumps(parsed_data.get("missing_skills", [])),
-            interview_questions=parsed_data.get("interview_questions", [])
+            extracted_skills=json.dumps(all_skills),
+            missing_keywords=json.dumps(missing_skills),
+            recommended_roles=json.dumps(roles),
+            interview_questions=json.dumps(questions)
         )
 
         # 4. Save to Database
