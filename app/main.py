@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from typing import List
@@ -68,10 +69,32 @@ def get_candidate_by_id(candidate_id: int, db: Session = Depends(get_db)):
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
     
-    # Clean output formatting for JSON response
-    return candidate
+    def parse_field(value):
+        """Safely convert JSON string or raw comma-separated text into a clean List"""
+        if not value:
+            return []
+        if isinstance(value, list):
+            return value
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, list) else [parsed]
+        except Exception:
+            return [s.strip() for s in str(value).split(",") if s.strip()]
 
-# --- Frontend Template Views (FIXED) ---
+    # Format the payload so frontend UI can loop over array data
+    return {
+        "id": candidate.id,
+        "candidate_name": candidate.candidate_name or "Unknown Candidate",
+        "email": candidate.email or "N/A",
+        "ats_score": candidate.ats_score or 0,
+        "candidate_summary": candidate.candidate_summary or "No summary available.",
+        "extracted_skills": parse_field(candidate.extracted_skills),
+        "missing_keywords": parse_field(candidate.missing_keywords),
+        "recommended_roles": parse_field(getattr(candidate, "recommended_roles", None)),
+        "interview_questions": parse_field(candidate.interview_questions)
+    }
+
+# --- Frontend Template Views ---
 
 @app.get("/", include_in_schema=False)
 def read_root(request: Request):
