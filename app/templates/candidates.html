@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Directory - AI HR Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-6 md:p-12">
+    <div class="max-w-6xl mx-auto space-y-8">
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-black text-sky-400">Candidate Directory</h1>
+                <p class="text-slate-400 text-sm mt-1">Manage and evaluate all analyzed applicants</p>
+            </div>
+            <a href="/" class="bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+                + Upload New Resume
+            </a>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+            <input type="text" id="searchInput" onkeyup="filterCandidates()" 
+                   placeholder="🔍 Search by name or skill (e.g., Python, Trushna)..." 
+                   class="bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg p-3 w-full focus:outline-none focus:border-sky-500">
+        </div>
+
+        <!-- Candidate Cards Grid -->
+        <div id="candidateGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Dynamic Cards Inserted Here -->
+        </div>
+
+        <div id="noResults" class="hidden text-center text-slate-500 py-12">
+            No candidates matching your search criteria.
+        </div>
+    </div>
+
+    <script>
+        let allCandidates = [];
+
+        async function fetchCandidates() {
+            try {
+                const res = await fetch('/candidates');
+                allCandidates = await res.json();
+                renderCandidates(allCandidates);
+            } catch (err) {
+                console.error("Failed to fetch candidates", err);
+            }
+        }
+
+        function renderCandidates(candidates) {
+            const grid = document.getElementById('candidateGrid');
+            grid.innerHTML = '';
+
+            if (candidates.length === 0) {
+                document.getElementById('noResults').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('noResults').classList.add('hidden');
+            }
+
+            candidates.forEach(c => {
+                const skillsHtml = (c.technical_skills || []).slice(0, 4).map(s => 
+                    `<span class="bg-indigo-950 text-indigo-300 text-xs px-2 py-0.5 rounded border border-indigo-800">${s}</span>`
+                ).join(' ');
+
+                const cardHtml = `
+                    <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 flex flex-col justify-between hover:border-sky-500/50 transition">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-lg text-slate-100">${c.candidate_name || 'Unnamed'}</h3>
+                                <span class="bg-sky-950 text-sky-400 font-bold text-xs px-2 py-1 rounded border border-sky-800">
+                                    ATS ${c.ats_score || 0}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-4">${c.email || 'No email'}</p>
+                            
+                            <div class="flex flex-wrap gap-1 mb-4">
+                                ${skillsHtml}
+                            </div>
+                        </div>
+
+                        <a href="/candidate-view/${c.id}" class="block text-center w-full bg-slate-800 hover:bg-slate-700 text-sky-400 font-semibold text-xs py-2 rounded-lg transition">
+                            View Full Analysis →
+                        </a>
+                    </div>
+                `;
+                grid.innerHTML += cardHtml;
+            });
+        }
+
+        function filterCandidates() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allCandidates.filter(c => {
+                const nameMatch = (c.candidate_name || '').toLowerCase().includes(query);
+                const skillMatch = (c.technical_skills || []).some(s => s.toLowerCase().includes(query));
+                return nameMatch || skillMatch;
+            });
+            renderCandidates(filtered);
+        }
+
+        fetchCandidates();
+    </script>
+</body>
+</html>

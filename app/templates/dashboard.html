@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Dashboard - AI HR Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans pb-12">
+    <nav class="border-b border-slate-800 bg-slate-950 p-4">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold text-indigo-400">🤖 AI HR Recruitment Assistant</h1>
+            <div class="flex items-center space-x-3">
+                <a href="/candidates-view" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+                    ← Back to Directory
+                </a>
+                <a href="/" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3 py-1.5 rounded-lg transition">
+                    + Upload Resume
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div id="loader" class="text-center mt-20 text-indigo-400 text-lg animate-pulse">
+        ⏳ Loading Candidate Analysis Profile...
+    </div>
+
+    <div id="content" class="max-w-5xl mx-auto mt-8 p-6 hidden space-y-6">
+        <!-- Header Profile Card -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 flex justify-between items-start">
+            <div>
+                <h2 id="candidateName" class="text-3xl font-bold text-indigo-300">Loading...</h2>
+                <p id="candidateEmail" class="text-slate-400 text-sm mt-1"></p>
+                <p id="candidateSummary" class="text-slate-300 text-sm mt-3 max-w-2xl"></p>
+            </div>
+            <div class="text-right">
+                <div class="bg-slate-900 px-6 py-4 rounded-xl border border-slate-700 inline-block text-center">
+                    <span class="block text-xs text-slate-400 uppercase tracking-wider font-semibold">ATS Score</span>
+                    <span id="atsScore" class="text-4xl font-extrabold text-green-400">0</span>
+                    <span class="text-slate-400 text-sm">/ 100</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <h3 class="text-lg font-bold text-indigo-400 mb-3">⚡ Technical Skills</h3>
+                <div id="techSkills" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <h3 class="text-lg font-bold text-amber-400 mb-3">⚠️ Missing Skills</h3>
+                <div id="missingSkills" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+
+        <!-- Recommended Roles -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+            <h3 class="text-lg font-bold text-emerald-400 mb-3">🎯 Recommended Roles</h3>
+            <ul id="recommendedRoles" class="list-disc list-inside space-y-1 text-slate-300"></ul>
+        </div>
+
+        <!-- Job Matching Section -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+            <h3 class="text-lg font-bold text-sky-400 mb-3">🤝 Job Role Match Evaluator</h3>
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="jobTitleInput" placeholder="Job Title (e.g., Python Developer Intern)" 
+                           class="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-3 w-full focus:outline-none focus:border-sky-500">
+                    <input type="text" id="skillsInput" placeholder="Required Skills (comma-separated, e.g., Python, MySQL, Git)" 
+                           class="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg p-3 w-full focus:outline-none focus:border-sky-500">
+                </div>
+                <button onclick="runJobMatch()" class="bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition">
+                    Calculate Match Score
+                </button>
+            </div>
+
+            <!-- Result Box -->
+            <div id="matchResult" class="hidden mt-6 bg-slate-900 p-4 rounded-lg border border-slate-700">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 id="resJobTitle" class="font-bold text-slate-200"></h4>
+                    <span id="resMatchScore" class="text-2xl font-black text-sky-400">0% Match</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <span class="text-emerald-400 font-semibold block mb-1">✅ Matched Skills:</span>
+                        <div id="resMatchedSkills" class="flex flex-wrap gap-1"></div>
+                    </div>
+                    <div>
+                        <span class="text-rose-400 font-semibold block mb-1">❌ Missing Skills:</span>
+                        <div id="resMissingSkills" class="flex flex-wrap gap-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Generated Interview Questions -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+            <h3 class="text-lg font-bold text-cyan-400 mb-3">🎤 Suggested Interview Questions</h3>
+            <ol id="interviewQuestions" class="list-decimal list-inside space-y-2 text-slate-300"></ol>
+        </div>
+    </div>
+
+    <script>
+        const candidateId = "{{ candidate_id }}";
+
+        async function fetchCandidateDetails() {
+            try {
+                const res = await fetch(`/candidates/${candidateId}`);
+                if (!res.ok) throw new Error("Candidate not found");
+                const data = await res.json();
+
+                document.getElementById('candidateName').textContent = data.candidate_name || "Unknown Candidate";
+                document.getElementById('candidateEmail').textContent = data.email ? `📧 ${data.email}` : "No email provided";
+                document.getElementById('candidateSummary').textContent = data.candidate_summary || "";
+                document.getElementById('atsScore').textContent = data.ats_score || 0;
+
+                // Technical Skills
+                const techContainer = document.getElementById('techSkills');
+                techContainer.innerHTML = (data.technical_skills || []).map(s => 
+                    `<span class="bg-indigo-950 text-indigo-300 text-xs px-3 py-1 rounded-full border border-indigo-700">${s}</span>`
+                ).join('') || '<span class="text-slate-500 text-sm">None listed</span>';
+
+                // Missing Skills
+                const missingContainer = document.getElementById('missingSkills');
+                missingContainer.innerHTML = (data.missing_skills || []).map(s => 
+                    `<span class="bg-amber-950 text-amber-300 text-xs px-3 py-1 rounded-full border border-amber-700">${s}</span>`
+                ).join('') || '<span class="text-slate-500 text-sm">None detected</span>';
+
+                // Roles
+                const rolesContainer = document.getElementById('recommendedRoles');
+                rolesContainer.innerHTML = (data.recommended_roles || []).map(r => `<li>${r}</li>`).join('') || '<li>No specific recommendations</li>';
+
+                // Interview Questions
+                const questionsContainer = document.getElementById('interviewQuestions');
+                questionsContainer.innerHTML = (data.interview_questions || []).map(q => `<li class="p-2 bg-slate-900 rounded border border-slate-700/50 my-1">${q}</li>`).join('') || '<li>No questions generated</li>';
+
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+            } catch (err) {
+                document.getElementById('loader').textContent = "❌ Failed to load candidate profile.";
+            }
+        }
+
+        // Job Match Evaluator Handler
+        async function runJobMatch() {
+            const jobTitle = document.getElementById('jobTitleInput').value.trim() || "Target Role";
+            const skillsRaw = document.getElementById('skillsInput').value.trim();
+            if (!skillsRaw) {
+                alert("Please enter required skills separated by commas.");
+                return;
+            }
+
+            const requiredSkills = skillsRaw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            try {
+                const response = await fetch('/match-job', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidate_id: parseInt(candidateId),
+                        job_title: jobTitle,
+                        required_skills: requiredSkills
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    document.getElementById('resJobTitle').textContent = result.job_title;
+                    document.getElementById('resMatchScore').textContent = `${result.match_score}% Match`;
+
+                    document.getElementById('resMatchedSkills').innerHTML = result.matched_skills.map(s => 
+                        `<span class="bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">${s}</span>`
+                    ).join('') || '<span class="text-slate-500">None</span>';
+
+                    document.getElementById('resMissingSkills').innerHTML = result.missing_skills.map(s => 
+                        `<span class="bg-rose-950 text-rose-300 px-2 py-0.5 rounded border border-rose-800">${s}</span>`
+                    ).join('') || '<span class="text-slate-500">None</span>';
+
+                    document.getElementById('matchResult').classList.remove('hidden');
+                } else {
+                    alert("Failed to calculate match score.");
+                }
+            } catch (err) {
+                alert("Error connecting to server.");
+            }
+        }
+
+        // Initial call on page load
+        fetchCandidateDetails();
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Environments & Secrets
+.env
+*.env
+venv/
+.venv/
+
+# Database & Uploads
+*.db
+uploads/
+app/uploads/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
