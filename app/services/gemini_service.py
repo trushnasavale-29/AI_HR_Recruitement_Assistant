@@ -1,20 +1,18 @@
 import json
 import os
-from dotenv import load_dotenv
+import json
 from groq import Groq
-
-# Load environment variables from .env
-load_dotenv()
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+from app.config import GROQ_API_KEY
 
 if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY is not set in the .env file")
+    raise ValueError("GROQ_API_KEY is not set in environment variables")
 
 # Initialize Groq Client
 client = Groq(api_key=GROQ_API_KEY)
 
 MODEL_NAME = "llama-3.3-70b-versatile"
+
+
 
 
 def analyze_resume(resume_text: str) -> dict:
