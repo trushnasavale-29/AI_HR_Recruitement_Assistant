@@ -7,6 +7,7 @@ from app.database.database import Base, engine
 from app.routers import upload
 from app.routers import upload, job_match
 from pathlib import Path
+from app.routers import upload, job_match, interview  # Add interview here
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 
@@ -33,7 +34,8 @@ templates = Jinja2Templates(directory=str(templates_path))
 
 app.include_router(upload.router)
 app.include_router(job_match.router)
-
+# Include Router
+app.include_router(interview.router)
 @app.get("/", include_in_schema=False)
 def read_root(request: Request):
     """Render main upload homepage"""

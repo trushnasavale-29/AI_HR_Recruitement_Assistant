@@ -142,3 +142,75 @@ Return ONLY a valid JSON object matching this exact structure with no extra conv
             result[key] = value
 
     return result
+
+
+def generate_interview_questions(
+    candidate_name: str,
+    skills: list,
+    missing_skills: list,
+    target_role: str = "Software Engineer",
+    difficulty: str = "Medium"
+) -> list:
+    """
+    Generates dynamic interview questions tailored to candidate strengths and missing skill gaps.
+    """
+    prompt = f"""
+You are an expert technical interviewer evaluating a candidate for a role.
+
+Candidate Name: {candidate_name}
+Target Role: {target_role}
+Difficulty Level: {difficulty}
+Known Technical Skills: {', '.join(skills) if skills else 'General Software Engineering'}
+Identified Skill Gaps / Missing Skills: {', '.join(missing_skills) if missing_skills else 'None'}
+
+Requirements:
+Generate exactly 5 targeted interview questions tailored to evaluate this candidate.
+Specifically probe their missing skills to assess how they bridge knowledge gaps.
+
+Return ONLY a valid JSON object matching this exact structure:
+{{
+    "questions": [
+        {{
+            "category": "Skill Gap Probe",
+            "question": "string - targeted question",
+            "rationale": "string - why this question is being asked based on their profile",
+            "sample_answer_key": "string - key concepts expected in a strong answer"
+        }}
+    ]
+}}
+"""
+
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are a senior technical interviewer returning strictly valid JSON objects.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.3,
+    )
+
+    response_text = response.choices[0].message.content.strip()
+
+    # Clean potential markdown formatting
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    elif response_text.startswith("```"):
+        response_text = response_text[3:]
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+
+    response_text = response_text.strip()
+
+    try:
+        data = json.loads(response_text)
+        if isinstance(data, dict):
+            return data.get("questions", [])
+        elif isinstance(data, list):
+            return data
+        return []
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse Interview Questions JSON response: {e}\nRaw output: {response_text}")
