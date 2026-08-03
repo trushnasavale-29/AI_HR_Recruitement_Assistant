@@ -66,23 +66,29 @@ def get_candidate_by_id(candidate_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Candidate not found")
     return candidate
 
-# --- Frontend Template Views ---
+# --- Frontend Template Views (FIXED) ---
 
 @app.get("/", include_in_schema=False)
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    """Render main upload homepage"""
+    return templates.TemplateResponse(
+        request=request, 
+        name="index.html"
+    )
 
 @app.get("/candidates-view", include_in_schema=False)
 def candidate_list_view(request: Request):
-    return templates.TemplateResponse("candidates.html", {"request": request})
+    """Render candidates directory page"""
+    return templates.TemplateResponse(
+        request=request, 
+        name="candidates.html"
+    )
 
 @app.get("/candidate-view/{candidate_id}", include_in_schema=False)
 def candidate_dashboard(candidate_id: int, request: Request):
+    """Render candidate analysis dashboard"""
     return templates.TemplateResponse(
-        "dashboard.html",
-        {"request": request, "candidate_id": candidate_id}
+        request=request,
+        name="dashboard.html",
+        context={"candidate_id": candidate_id}
     )
-
-@app.get("/health", tags=["System"])
-def health_check():
-    return {"status": "online", "message": "Backend API is running smoothly"}
