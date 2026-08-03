@@ -11,27 +11,40 @@ from app.database.database import Base, engine, get_db
 from app.models.candidate import Candidate, User 
 from app.routers import upload, job_match, interview, auth 
 
-# Initialize database tables
-Base.metadata.create_all(bind=engine)
+# Initialize database tables safely
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Database initialization warning: {e}")
 
 app = FastAPI(
     title="AI HR Recruitment Assistant",
     description="AI-powered resume analysis and recruitment assistant"
 )
 
-# APP_DIR is backend/app
+# Robust path discovery: Check both backend/templates and backend/app/templates
 APP_DIR = Path(__file__).resolve().parent
 
-# static is in backend/app/static
-static_path = APP_DIR / "static"
-# templates is in backend/templates (one level up from app)
-templates_path = APP_DIR.parent / "templates"
+# Check potential template locations dynamically
+if (APP_DIR.parent / "templates").exists():
+    templates_dir = APP_DIR.parent / "templates"
+elif (APP_DIR / "templates").exists():
+    templates_dir = APP_DIR / "templates"
+else:
+    templates_dir = APP_DIR.parent / "templates"
+    templates_dir.mkdir(parents=True, exist_ok=True)
 
-static_path.mkdir(parents=True, exist_ok=True)
-templates_path.mkdir(parents=True, exist_ok=True)
+# Check potential static locations dynamically
+if (APP_DIR / "static").exists():
+    static_dir = APP_DIR / "static"
+elif (APP_DIR.parent / "static").exists():
+    static_dir = APP_DIR.parent / "static"
+else:
+    static_dir = APP_DIR / "static"
+    static_dir.mkdir(parents=True, exist_ok=True)
 
-app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
-templates = Jinja2Templates(directory=str(templates_path))
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+templates = Jinja2Templates(directory=str(templates_dir))
 
 # Register Routers
 app.include_router(auth.router)
