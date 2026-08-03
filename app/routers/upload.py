@@ -10,7 +10,7 @@ from app.services.gemini_service import analyze_resume
 
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
 
-@router.post("/resume") 
+@router.post("/resume")
 async def upload_and_process_resume(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db)
@@ -33,12 +33,12 @@ async def upload_and_process_resume(
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
 
-        # 2. Extract analysis and interview questions via AI
+        # 2. Extract structured analysis & interview questions from AI
         parsed_data = analyze_resume(extracted_text)
         if not isinstance(parsed_data, dict):
             parsed_data = {}
 
-        # 3. Construct Candidate using exact Model fields
+        # 3. Create Candidate with complete profile details + interview questions
         candidate = Candidate(
             candidate_name=parsed_data.get("candidate_name") or parsed_data.get("name") or "Unknown Candidate",
             email=parsed_data.get("email", ""),
@@ -66,4 +66,4 @@ async def upload_and_process_resume(
     except Exception as e:
         db.rollback()
         print(f"Error processing resume: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Server error processing PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
