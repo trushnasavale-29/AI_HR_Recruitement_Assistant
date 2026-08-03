@@ -10,7 +10,7 @@ from app.services.gemini_service import analyze_resume
 
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
 
-@router.post("/resume")
+@router.post("/resume") 
 async def upload_and_process_resume(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db)
